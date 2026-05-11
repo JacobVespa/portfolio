@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jacob Vespa — Game Programmer & Designer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet" />
+  <style>
+    /* ── TOKENS ───────────────────────────────────────────── */
+    :root {
+      --bg:        #080A0C;
+      --bg2:       #0E1114;
+      --bg3:       #13171C;
+      --surface:   #181D23;
+      --border:    #222830;
+      --accent:    #8B1A2F;
+      --accent2:   #B22340;
+      --accent-lo: rgba(139,26,47,0.12);
+      --accent-gl: rgba(139,26,47,0.35);
+      --text:      #E8EAF0;
+      --text-mid:  #8A909C;
+      --text-lo:   #454B57;
+      --mono:      'Share Tech Mono', monospace;
+      --display:   'Syne', sans-serif;
+      --body:      'DM Sans', sans-serif;
+      --r:         6px;
+    }
+
+    /* ── RESET ────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--body);
+      font-size: 16px;
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    /* ── NOISE OVERLAY ────────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+      opacity: 0.025;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* ── SCANLINES ────────────────────────────────────────── */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.04) 2px,
+        rgba(0,0,0,0.04) 4px
+      );
+      pointer-events: none;
+      z-index: 9998;
+    }
+
+    /* ── SCROLLBAR ────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 2px; }
+
+    /* ── SELECTION ────────────────────────────────────────── */
+    ::selection { background: var(--accent); color: #fff; }
+
+    /* ── NAV ──────────────────────────────────────────────── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 clamp(1.5rem, 5vw, 4rem);
+      height: 64px;
+      background: rgba(8,10,12,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      color: var(--accent2);
+      letter-spacing: 0.08em;
+      text-decoration: none;
+    }
+    .nav-logo span { color: var(--text-mid); }
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+    .nav-links a {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--text-mid);
+      text-decoration: none;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+      position: relative;
+    }
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      bottom: -3px; left: 0;
+      width: 0; height: 1px;
+      background: var(--accent2);
+      transition: width 0.25s;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .nav-links a:hover::after { width: 100%; }
+
+    /* ── HERO ─────────────────────────────────────────────── */
+    #hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: clamp(6rem, 12vw, 10rem) clamp(1.5rem, 8vw, 8rem);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Grid background */
+    #hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 60px 60px;
+      mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+      opacity: 0.4;
+    }
+
+    /* Glow orb */
+    #hero::after {
+      content: '';
+      position: absolute;
+      top: 30%; left: 60%;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(139,26,47,0.15) 0%, transparent 70%);
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+    }
+
+    .hero-tag {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--accent2);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+      opacity: 0;
+      animation: fadeUp 0.8s ease forwards 0.2s;
+    }
+    .hero-name {
+      font-family: var(--display);
+      font-size: clamp(3.5rem, 9vw, 8rem);
+      font-weight: 800;
+      line-height: 0.9;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      opacity: 0;
+      animation: fadeUp 0.8s ease forwards 0.4s;
+    }
+    .hero-name em {
+      font-style: normal;
+      color: var(--accent2);
+      display: block;
+    }
+    .hero-sub {
+      font-family: var(--body);
+      font-weight: 300;
+      font-size: clamp(1rem, 2vw, 1.2rem);
+      color: var(--text-mid);
+      margin-top: 2rem;
+      max-width: 480px;
+      opacity: 0;
+      animation: fadeUp 0.8s ease forwards 0.6s;
+    }
+    .hero-links {
+      display: flex;
+      gap: 1rem;
+      margin-top: 2.5rem;
+      flex-wrap: wrap;
+      opacity: 0;
+      animation: fadeUp 0.8s ease forwards 0.8s;
+    }
+    .btn {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0.75rem 1.5rem;
+      border-radius: var(--r);
+      text-decoration: none;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border: 1px solid var(--accent);
+    }
+    .btn-primary:hover {
+      background: var(--accent2);
+      border-color: var(--accent2);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(139,26,47,0.4);
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-mid);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover {
+      border-color: var(--text-mid);
+      color: var(--text);
+      transform: translateY(-2px);
+    }
+
+    /* Scroll indicator */
+    .scroll-hint {
+      position: absolute;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      opacity: 0;
+      animation: fadeUp 0.8s ease forwards 1.2s;
+    }
+    .scroll-hint span {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--text-lo);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+    .scroll-line {
+      width: 1px;
+      height: 40px;
+      background: linear-gradient(to bottom, var(--accent), transparent);
+      animation: scrollPulse 2s ease infinite;
+    }
+
+    /* ── SECTION SHARED ───────────────────────────────────── */
+    section {
+      padding: clamp(4rem, 8vw, 7rem) clamp(1.5rem, 8vw, 8rem);
+    }
+    .section-label {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--accent2);
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+      max-width: 60px;
+    }
+    .section-title {
+      font-family: var(--display);
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.02em;
+      margin-bottom: 3rem;
+      color: var(--text);
+    }
+
+    /* ── ABOUT ────────────────────────────────────────────── */
+    #about { background: var(--bg2); }
+    .about-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: start;
+    }
+    .about-text p {
+      font-weight: 300;
+      color: var(--text-mid);
+      margin-bottom: 1.25rem;
+      font-size: 1.05rem;
+    }
+    .about-text p strong {
+      color: var(--text);
+      font-weight: 400;
+    }
+    .about-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      overflow: hidden;
+    }
+    .stat {
+      background: var(--surface);
+      padding: 1.5rem;
+      transition: background 0.2s;
+    }
+    .stat:hover { background: var(--bg3); }
+    .stat-num {
+      font-family: var(--display);
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: var(--accent2);
+      line-height: 1;
+      display: block;
+    }
+    .stat-label {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--text-lo);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-top: 0.35rem;
+      display: block;
+    }
+
+    /* ── PROJECTS ─────────────────────────────────────────── */
+    #projects { background: var(--bg); }
+    .projects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 1.5rem;
+    }
+    .project-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      overflow: hidden;
+      transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
+      position: relative;
+    }
+    .project-card:hover {
+      transform: translateY(-6px);
+      border-color: var(--accent-gl);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 0 1px var(--accent-gl);
+    }
+
+    /* Featured card spans full width */
+    .project-card.featured {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .project-img {
+      aspect-ratio: 16/9;
+      background: var(--bg3);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .project-card.featured .project-img {
+      aspect-ratio: unset;
+      min-height: 280px;
+    }
+    .project-img-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      color: var(--text-lo);
+    }
+    .project-img-placeholder svg {
+      opacity: 0.4;
+    }
+    .project-img-placeholder span {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    /* Accent bar on hover */
+    .project-card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.3s ease;
+    }
+    .project-card:hover::after { transform: scaleX(1); }
+
+    .project-body {
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .project-card.featured .project-body {
+      padding: 2rem;
+      justify-content: center;
+    }
+    .project-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    .tag {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.25rem 0.6rem;
+      border-radius: 3px;
+      background: var(--accent-lo);
+      color: var(--accent2);
+      border: 1px solid rgba(139,26,47,0.2);
+    }
+    .tag.neutral {
+      background: rgba(255,255,255,0.04);
+      color: var(--text-lo);
+      border-color: var(--border);
+    }
+    .project-name {
+      font-family: var(--display);
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.1;
+    }
+    .project-role {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--accent2);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .project-desc {
+      font-weight: 300;
+      color: var(--text-mid);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+    .project-highlights {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .project-highlights li {
+      font-size: 0.9rem;
+      font-weight: 300;
+      color: var(--text-mid);
+      padding-left: 1rem;
+      position: relative;
+    }
+    .project-highlights li::before {
+      content: '—';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-size: 0.8rem;
+    }
+    .project-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 0.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+    .project-date {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      color: var(--text-lo);
+      letter-spacing: 0.05em;
+    }
+    .project-links { display: flex; gap: 0.5rem; }
+    .icon-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px; height: 32px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      color: var(--text-mid);
+      text-decoration: none;
+      transition: all 0.2s;
+      font-size: 0.8rem;
+    }
+    .icon-link:hover {
+      border-color: var(--accent2);
+      color: var(--accent2);
+      background: var(--accent-lo);
+    }
+
+    /* Level Up badge */
+    .levelup-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.3rem 0.7rem;
+      border-radius: 3px;
+      background: rgba(255, 180, 0, 0.08);
+      color: #D4A017;
+      border: 1px solid rgba(212, 160, 23, 0.25);
+    }
+    .levelup-badge::before { content: '★'; }
+
+    /* ── SKILLS ───────────────────────────────────────────── */
+    #skills { background: var(--bg2); }
+    .skills-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      overflow: hidden;
+    }
+    .skill-group {
+      background: var(--surface);
+      padding: 1.75rem;
+      transition: background 0.2s;
+    }
+    .skill-group:hover { background: var(--bg3); }
+    .skill-group-name {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent2);
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .skill-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .skill-list li {
+      font-size: 0.9rem;
+      font-weight: 300;
+      color: var(--text-mid);
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .skill-list li::before {
+      content: '';
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    /* ── CONTACT ──────────────────────────────────────────── */
+    #contact {
+      background: var(--bg);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    #contact::before {
+      content: '';
+      position: absolute;
+      bottom: -200px; left: 50%;
+      width: 700px; height: 700px;
+      background: radial-gradient(circle, rgba(139,26,47,0.1) 0%, transparent 70%);
+      transform: translateX(-50%);
+      pointer-events: none;
+    }
+    .contact-inner {
+      max-width: 600px;
+      margin: 0 auto;
+      position: relative;
+    }
+    .contact-inner p {
+      font-weight: 300;
+      color: var(--text-mid);
+      margin-bottom: 2.5rem;
+      font-size: 1.05rem;
+    }
+    .contact-links {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 3rem;
+    }
+    .contact-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--text-mid);
+      text-decoration: none;
+      padding: 0.75rem 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      transition: all 0.2s;
+      letter-spacing: 0.05em;
+    }
+    .contact-item:hover {
+      border-color: var(--accent2);
+      color: var(--text);
+      background: var(--accent-lo);
+      transform: translateY(-2px);
+    }
+    .contact-item svg { flex-shrink: 0; }
+
+    /* ── FOOTER ───────────────────────────────────────────── */
+    footer {
+      padding: 2rem clamp(1.5rem, 8vw, 8rem);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg);
+    }
+    footer span {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--text-lo);
+      letter-spacing: 0.08em;
+    }
+
+    /* ── ANIMATIONS ───────────────────────────────────────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes scrollPulse {
+      0%, 100% { opacity: 0.3; transform: scaleY(1); }
+      50%       { opacity: 1;   transform: scaleY(1.1); }
+    }
+
+    /* Scroll reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: none;
+    }
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+
+    /* ── RESPONSIVE ───────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .about-grid { grid-template-columns: 1fr; gap: 2rem; }
+      .project-card.featured { grid-template-columns: 1fr; }
+      .project-card.featured .project-img { min-height: 200px; }
+      nav { padding: 0 1.25rem; }
+      .nav-links { gap: 1.2rem; }
+    }
+    @media (max-width: 520px) {
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── NAV ──────────────────────────────────────────────── -->
+  <nav>
+    <a class="nav-logo" href="#hero">JV<span>.dev</span></a>
+    <ul class="nav-links">
+      <li><a href="#about">About</a></li>
+      <li><a href="#projects">Projects</a></li>
+      <li><a href="#skills">Skills</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+  </nav>
+
+  <!-- ── HERO ─────────────────────────────────────────────── -->
+  <section id="hero">
+    <p class="hero-tag">// Game Programmer &amp; Designer</p>
+    <h1 class="hero-name">
+      Jacob
+      <em>Vespa.</em>
+    </h1>
+    <p class="hero-sub">
+      Graduating game programmer with 3+ years of Unity &amp; C# experience.
+      I build the systems that make games feel alive.
+    </p>
+    <div class="hero-links">
+      <a class="btn btn-primary" href="#projects">View Projects</a>
+      <a class="btn btn-ghost" href="#contact">Get in Touch</a>
+      <a class="btn btn-ghost" href="JacobVespa_Resume.pdf" target="_blank">Resume ↗</a>
+    </div>
+    <div class="scroll-hint">
+      <span>Scroll</span>
+      <div class="scroll-line"></div>
+    </div>
+  </section>
+
+  <!-- ── ABOUT ─────────────────────────────────────────────── -->
+  <section id="about">
+    <p class="section-label reveal">01 — About</p>
+    <h2 class="section-title reveal reveal-delay-1">Who I Am</h2>
+    <div class="about-grid">
+      <div class="about-text reveal reveal-delay-2">
+        <p>
+          I'm a <strong>game programming and design graduate</strong> from Brock University &amp; Niagara College's
+          joint four-year program, graduating Spring 2026. I sit at the intersection of engineering and
+          design — I don't just implement systems, I help shape how they feel to play.
+        </p>
+        <p>
+          Over the past two years I've served as <strong>Tech Lead and Systems Designer</strong> on
+          multi-disciplinary student teams, shipping games that were exhibited competitively at
+          <strong>Level Up Showcase 2025 &amp; 2026</strong> — Canada's annual game industry showcase.
+        </p>
+        <p>
+          I'm a detail-oriented builder who cares about code architecture as much as player experience.
+          Currently seeking <strong>entry-level and internship opportunities</strong> in game development.
+        </p>
+        <div style="margin-top:1.5rem;">
+          <a class="btn btn-ghost" href="https://github.com/JacobVespa" target="_blank">GitHub ↗</a>
+        </div>
+      </div>
+      <div class="about-stats reveal reveal-delay-3">
+        <div class="stat">
+          <span class="stat-num">3+</span>
+          <span class="stat-label">Years Unity &amp; C#</span>
+        </div>
+        <div class="stat">
+          <span class="stat-num">3</span>
+          <span class="stat-label">Shipped Projects</span>
+        </div>
+        <div class="stat">
+          <span class="stat-num">2×</span>
+          <span class="stat-label">Level Up Exhibitor</span>
+        </div>
+        <div class="stat">
+          <span class="stat-num">11</span>
+          <span class="stat-label">Largest Team Led</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── PROJECTS ──────────────────────────────────────────── -->
+  <section id="projects">
+    <p class="section-label reveal">02 — Projects</p>
+    <h2 class="section-title reveal reveal-delay-1">What I've Built</h2>
+
+    <div class="projects-grid">
+
+      <!-- Cave Crashers — Featured -->
+      <div class="project-card featured reveal reveal-delay-2">
+        <div class="project-img">
+          <!-- Replace src below with your actual screenshot -->
+          <div class="project-img-placeholder">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+            <span>Screenshot coming soon</span>
+          </div>
+        </div>
+        <div class="project-body">
+          <div class="project-tags">
+            <span class="tag">Unity</span>
+            <span class="tag">C#</span>
+            <span class="tag">Co-op</span>
+            <span class="tag neutral">Team of 11</span>
+            <span class="levelup-badge">Level Up 2026</span>
+          </div>
+          <p class="project-role">Tech Lead · Programmer · Systems Designer</p>
+          <h3 class="project-name">Cave Crashers</h3>
+          <p class="project-desc">
+            A 2D co-op arcade wave shooter built with a team of 11. I architected the full backend and drove design decisions across the entire project.
+          </p>
+          <ul class="project-highlights">
+            <li>State machines, level loading &amp; tree/node-based map architecture</li>
+            <li>Seed-based procedural generation &amp; JSON leaderboard w/ custom virtual keyboard</li>
+            <li>Cinematic camera system (shake/pan), modular tutorial system</li>
+            <li>Managed 4 programmers, collaborated with 6 artists</li>
+          </ul>
+          <div class="project-footer">
+            <span class="project-date">Sep 2024 — Apr 2025</span>
+            <div class="project-links">
+              <a class="icon-link" href="https://github.com/JacobVespa" target="_blank" title="GitHub">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hardly Workin' -->
+      <div class="project-card reveal reveal-delay-1">
+        <div class="project-img">
+          <div class="project-img-placeholder">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+            <span>Screenshot coming soon</span>
+          </div>
+        </div>
+        <div class="project-body">
+          <div class="project-tags">
+            <span class="tag">Unity</span>
+            <span class="tag">C#</span>
+            <span class="tag neutral">Single Player</span>
+            <span class="levelup-badge">Level Up 2025</span>
+          </div>
+          <p class="project-role">Lead Programmer · Designer</p>
+          <h3 class="project-name">Hardly Workin'</h3>
+          <p class="project-desc">
+            An office simulation game with layered mechanics. I led both programming and design, building everything from AI systems to in-world UI.
+          </p>
+          <ul class="project-highlights">
+            <li>In-world UI interactions &amp; game state programming</li>
+            <li>AI behaviour, mini-game integration &amp; full controller support</li>
+            <li>Progress &amp; performance tracking systems</li>
+          </ul>
+          <div class="project-footer">
+            <span class="project-date">Sep 2024 — Apr 2025</span>
+            <div class="project-links">
+              <a class="icon-link" href="https://github.com/JacobVespa" target="_blank" title="GitHub">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- NovaShot -->
+      <div class="project-card reveal reveal-delay-2">
+        <div class="project-img">
+          <div class="project-img-placeholder">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+            <span>Screenshot coming soon</span>
+          </div>
+        </div>
+        <div class="project-body">
+          <div class="project-tags">
+            <span class="tag">Unity</span>
+            <span class="tag">C#</span>
+            <span class="tag neutral">Platformer</span>
+          </div>
+          <p class="project-role">Lead Programmer</p>
+          <h3 class="project-name">NovaShot</h3>
+          <p class="project-desc">
+            A platformer built around a unique Black Hole Gun mechanic. I handled all core gameplay systems, UI, and audio integration.
+          </p>
+          <ul class="project-highlights">
+            <li>Black Hole Gun mechanic &amp; dynamic level loading</li>
+            <li>All UI design &amp; implementation</li>
+            <li>Audio integration (SFX &amp; background music)</li>
+          </ul>
+          <div class="project-footer">
+            <span class="project-date">Jan 2024 — Apr 2024</span>
+            <div class="project-links">
+              <a class="icon-link" href="https://github.com/JacobVespa" target="_blank" title="GitHub">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── SKILLS ─────────────────────────────────────────────── -->
+  <section id="skills">
+    <p class="section-label reveal">03 — Skills</p>
+    <h2 class="section-title reveal reveal-delay-1">What I Work With</h2>
+    <div class="skills-grid">
+      <div class="skill-group reveal">
+        <p class="skill-group-name">Languages</p>
+        <ul class="skill-list">
+          <li>C# (Primary)</li>
+          <li>Java</li>
+          <li>C++</li>
+        </ul>
+      </div>
+      <div class="skill-group reveal reveal-delay-1">
+        <p class="skill-group-name">Engines &amp; Tools</p>
+        <ul class="skill-list">
+          <li>Unity3D (3+ years)</li>
+          <li>Git &amp; GitHub</li>
+          <li>Visual Studio Code</li>
+          <li>Helix (Project Management)</li>
+          <li>Clockify</li>
+        </ul>
+      </div>
+      <div class="skill-group reveal reveal-delay-2">
+        <p class="skill-group-name">Game Systems</p>
+        <ul class="skill-list">
+          <li>State Machines</li>
+          <li>AI Behaviour</li>
+          <li>Controller Input</li>
+          <li>JSON Data Persistence</li>
+          <li>Procedural Generation</li>
+          <li>Level Loading &amp; Streaming</li>
+        </ul>
+      </div>
+      <div class="skill-group reveal reveal-delay-3">
+        <p class="skill-group-name">Design</p>
+        <ul class="skill-list">
+          <li>Game Systems Design</li>
+          <li>UI / UX</li>
+          <li>Player Experience</li>
+          <li>Scope &amp; Feature Planning</li>
+        </ul>
+      </div>
+      <div class="skill-group reveal">
+        <p class="skill-group-name">Collaboration</p>
+        <ul class="skill-list">
+          <li>Technical Leadership</li>
+          <li>Cross-discipline Teams</li>
+          <li>Scope Management</li>
+          <li>Public Presentation</li>
+          <li>GDD Documentation</li>
+        </ul>
+      </div>
+      <div class="skill-group reveal reveal-delay-1">
+        <p class="skill-group-name">Productivity</p>
+        <ul class="skill-list">
+          <li>Microsoft Office Suite</li>
+          <li>Google Workspace</li>
+          <li>Clockify</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── CONTACT ────────────────────────────────────────────── -->
+  <section id="contact">
+    <p class="section-label reveal" style="justify-content:center;">04 — Contact</p>
+    <h2 class="section-title reveal reveal-delay-1" style="text-align:center;">Let's Talk</h2>
+    <div class="contact-inner">
+      <p class="reveal reveal-delay-2">
+        I'm actively looking for entry-level and internship opportunities in game development.
+        Whether you have a role, a project, or just want to connect — my inbox is open.
+      </p>
+      <div class="contact-links reveal reveal-delay-3">
+        <a class="contact-item" href="mailto:vespajacob@gmail.com">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          vespajacob@gmail.com
+        </a>
+        <a class="contact-item" href="https://www.linkedin.com/in/jacob-vespa/" target="_blank">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg>
+          LinkedIn
+        </a>
+        <a class="contact-item" href="https://github.com/JacobVespa" target="_blank">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          GitHub
+        </a>
+      </div>
+      <a class="btn btn-primary reveal" href="JacobVespa_Resume.pdf" target="_blank" style="margin:0 auto; display:inline-flex;">
+        Download Resume ↓
+      </a>
+    </div>
+  </section>
+
+  <!-- ── FOOTER ─────────────────────────────────────────────── -->
+  <footer>
+    <span>© 2026 Jacob Vespa</span>
+    <span>Built with HTML · Hosted on GitHub Pages</span>
+  </footer>
+
+  <!-- ── SCROLL REVEAL JS ───────────────────────────────────── -->
+  <script>
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+          observer.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+  </script>
+
+</body>
+</html>
